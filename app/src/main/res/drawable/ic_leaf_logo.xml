@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Aro exterior -->
+    <path
+        android:pathData="M50,50m-43,0a43,43 0,1 1,86 0a43,43 0,1 1,-86 0"
+        android:strokeColor="#2E7D32"
+        android:strokeWidth="7" />
+
+    <!-- Hoja -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M27,64 C24,42 40,29 73,25 C73,28 72,50 58,61 C49,68 36,69 27,64 Z" />
+
+    <!-- Nervadura -->
+    <path
+        android:pathData="M30,63 C40,47 54,38 67,33"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+</vector>
