@@ -13,7 +13,7 @@ object IntentExtras {
     const val LOGGED_OUT = "EXTRA_LOGGED_OUT"
 
     // Resultado que SettingsActivity devuelve a quien la abrió
-    const val MAP_UNIT = "EXTRA_MAP_UNIT"
+    const val MAP_RADIUS_KM = "EXTRA_MAP_RADIUS_KM"
     const val RANKING_VISIBLE = "EXTRA_RANKING_VISIBLE"
     const val NOTIFICATIONS_ENABLED = "EXTRA_NOTIFICATIONS_ENABLED"
 }

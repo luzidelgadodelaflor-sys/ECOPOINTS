@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Fotos de evidencia de los retos (almacenamiento privado de la app) -->
+    <files-path
+        name="evidence"
+        path="evidence/" />
+</paths>

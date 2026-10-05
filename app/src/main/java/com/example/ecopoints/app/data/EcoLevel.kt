@@ -15,5 +15,28 @@ data class EcoLevel(val number: Int, val badge: String, val minPoints: Int) {
 
         fun forPoints(historicalPoints: Int): EcoLevel =
             LEVELS.last { historicalPoints >= it.minPoints }
+
+        /** Nivel siguiente, o null si ya está en el máximo. */
+        fun nextAfter(level: EcoLevel): EcoLevel? = LEVELS.firstOrNull { it.number == level.number + 1 }
+    }
+}
+
+/**
+ * Etapa de crecimiento de la mascota: crece con el nivel del usuario
+ * (la imagen se agranda y en la última etapa gana un marco dorado).
+ */
+enum class PetStage(val label: String, val imageSizeDp: Int) {
+    BABY("Bebé", 64),
+    YOUNG("Joven", 80),
+    ADULT("Adulta", 96),
+    LEGENDARY("Legendaria", 100);
+
+    companion object {
+        fun forLevel(level: EcoLevel): PetStage = when (level.number) {
+            1 -> BABY
+            2 -> YOUNG
+            3 -> ADULT
+            else -> LEGENDARY
+        }
     }
 }

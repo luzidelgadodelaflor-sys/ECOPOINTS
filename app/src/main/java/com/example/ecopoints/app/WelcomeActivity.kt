@@ -12,6 +12,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -140,7 +145,7 @@ fun WelcomeScreenContent(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = EcoCard),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
@@ -148,7 +153,7 @@ fun WelcomeScreenContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "¡Hola! Soy tu guardián $petDisplayName 🌱",
+                            "¡Hola! Soy tu guardián $petDisplayName",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
                             color = EcoGreenDark
@@ -157,7 +162,7 @@ fun WelcomeScreenContent(
                         Text(
                             "Cuidaremos el medio ambiente juntos para ganar EcoPoints y subir de nivel.",
                             fontSize = 13.sp,
-                            color = Color.Gray,
+                            color = EcoTextMuted,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -168,7 +173,7 @@ fun WelcomeScreenContent(
                 modifier = Modifier
                     .size(240.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color.White)
+                    .background(EcoCard)
                     .border(BorderStroke(2.dp, EcoGreenLight), RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -183,7 +188,7 @@ fun WelcomeScreenContent(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = EcoCard),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -196,7 +201,7 @@ fun WelcomeScreenContent(
                     Text(
                         if (isNewUser) "Hemos preparado tu espacio ecológico" else "Tienes $balance EcoPoints esperando en tu alcancía verde",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = EcoTextMuted
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -213,11 +218,11 @@ fun WelcomeScreenContent(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🎁", fontSize = 20.sp)
+                                Icon(Icons.Filled.CardGiftcard, contentDescription = null, tint = EcoGreen, modifier = Modifier.size(24.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text("Bono de bienvenida", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = EcoGreenDark)
-                                    Text("Acreditados a tu alcancía verde", fontSize = 11.sp, color = Color.DarkGray)
+                                    Text("Acreditados a tu alcancía verde", fontSize = 11.sp, color = EcoTextSecondary)
                                 }
                             }
                             Text("+50 EcoPoints", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = EcoGreen)
@@ -230,17 +235,17 @@ fun WelcomeScreenContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFFFF9E6))
+                            .background(EcoGoldContainer)
                             .padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🏆", fontSize = 20.sp)
+                            Icon(Icons.Filled.EmojiEvents, contentDescription = null, tint = EcoGold, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(if (isNewUser) "Insignia Desbloqueada" else "Tu insignia actual", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = EcoGold)
-                                Text("\"${level.badge}\"", fontSize = 11.sp, color = Color.DarkGray)
+                                Text("\"${level.badge}\"", fontSize = 11.sp, color = EcoTextSecondary)
                             }
                         }
                         Text("Nivel ${level.number}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = EcoGold)
@@ -256,7 +261,9 @@ fun WelcomeScreenContent(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = EcoGreen)
                     ) {
-                        Text("Ir al Panel Principal →", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text("Ir al Panel Principal", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -272,7 +279,9 @@ fun WelcomeScreenContent(
                                 .height(38.dp),
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text("⚙️ Ajustes", fontSize = 12.sp, color = EcoGreenDark)
+                            Icon(Icons.Filled.Settings, contentDescription = null, tint = EcoGreenDark, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Ajustes", fontSize = 12.sp, color = EcoGreenDark)
                         }
 
                         OutlinedButton(

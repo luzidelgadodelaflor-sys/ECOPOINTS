@@ -13,12 +13,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Pets
+import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -41,10 +48,17 @@ class RegisterActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize(), color = EcoBackground) {
                     RegisterScreenContent(
                         initialEmail = prefillEmail,
-                        onRegisterSuccess = { fullName, email, selectedPet, petName ->
+                        onRegister = register@{ fullName, email, password, selectedPet, petName ->
+                            if (prefs.isAccountEmail(email)) {
+                                return@register "Ya existe una cuenta con este correo. Inicia sesión."
+                            }
+                            // Una cuenta por dispositivo: una cuenta nueva empieza su propio progreso
+                            if (prefs.hasAccount()) prefs.clearAll()
+
                             prefs.setUserLoggedIn(true)
                             prefs.setUserName(fullName)
                             prefs.setUserEmail(email)
+                            prefs.savePassword(password)
                             prefs.earnEcoPoints(50)
                             val fullPetInfo = if (petName.isNotBlank()) "$selectedPet ($petName)" else selectedPet
                             prefs.setPetLevel(fullPetInfo)
@@ -59,6 +73,7 @@ class RegisterActivity : ComponentActivity() {
                             }
                             startActivity(intent)
                             finish()
+                            null
                         },
                         onBackToLogin = { typedEmail ->
                             // Devuelve al login el correo que el usuario alcanzó a escribir
@@ -78,7 +93,8 @@ class RegisterActivity : ComponentActivity() {
 @Composable
 fun RegisterScreenContent(
     initialEmail: String,
-    onRegisterSuccess: (String, String, String, String) -> Unit,
+    /** Recibe nombre, correo, contraseña, mascota y su nombre; devuelve el error o null si se registró. */
+    onRegister: (String, String, String, String, String) -> String?,
     onBackToLogin: (String) -> Unit
 ) {
     var fullName by remember { mutableStateOf("") }
@@ -91,11 +107,11 @@ fun RegisterScreenContent(
     var selectedPet by remember { mutableStateOf("Koala") }
 
     val pets = listOf(
-        Triple("Zorro", "🦊", "Zorro"),
-        Triple("Panda", "🐼", "Panda"),
-        Triple("Koala", "🐨", "Koala"),
-        Triple("Gato", "🐱", "Gato"),
-        Triple("Búho", "🦉", "Búho")
+        "Zorro" to R.drawable.zorro_ecopoints,
+        "Panda" to R.drawable.panda_ecopoints,
+        "Koala" to R.drawable.koala_ecopoints,
+        "Gato" to R.drawable.gato_ecopoints,
+        "Búho" to R.drawable.buho_ecopoints
     )
 
     val scrollState = rememberScrollState()
@@ -140,28 +156,33 @@ fun RegisterScreenContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                pets.forEach { (name, emoji, _) ->
+                pets.forEach { (name, imageRes) ->
                     val isSelected = selectedPet == name
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .width(58.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) EcoGreenLight else Color.White)
+                            .background(if (isSelected) EcoGreenLight else EcoCard)
                             .border(
-                                BorderStroke(1.5.dp, if (isSelected) EcoGreen else Color.LightGray),
+                                BorderStroke(1.5.dp, if (isSelected) EcoGreen else EcoBorder),
                                 RoundedCornerShape(10.dp)
                             )
                             .clickable { selectedPet = name }
                             .padding(vertical = 6.dp)
                     ) {
-                        Text(emoji, fontSize = 24.sp)
+                        Image(
+                            painter = painterResource(id = imageRes),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(32.dp)
+                        )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             name,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = if (isSelected) EcoGreenDark else Color.Gray
+                            color = if (isSelected) EcoGreenDark else EcoTextMuted
                         )
                     }
                 }
@@ -172,7 +193,7 @@ fun RegisterScreenContent(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = EcoCard),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
@@ -185,7 +206,7 @@ fun RegisterScreenContent(
                         value = fullName,
                         onValueChange = { fullName = it },
                         label = { Text("Nombre de usuario") },
-                        leadingIcon = { Text("👤") },
+                        leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null, tint = EcoGreen) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -197,7 +218,7 @@ fun RegisterScreenContent(
                         value = petName,
                         onValueChange = { petName = it },
                         label = { Text("Nombre para tu mascota") },
-                        leadingIcon = { Text("🐾") },
+                        leadingIcon = { Icon(Icons.Outlined.Pets, contentDescription = null, tint = EcoGreen) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -209,7 +230,7 @@ fun RegisterScreenContent(
                         value = email,
                         onValueChange = { email = it },
                         label = { Text("Correo electrónico") },
-                        leadingIcon = { Text("📧") },
+                        leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = EcoGreen) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -221,7 +242,7 @@ fun RegisterScreenContent(
                         value = password,
                         onValueChange = { password = it },
                         label = { Text("Contraseña") },
-                        leadingIcon = { Text("🔒") },
+                        leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = EcoGreen) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         visualTransformation = PasswordVisualTransformation(),
@@ -234,7 +255,7 @@ fun RegisterScreenContent(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it },
                         label = { Text("Confirmar contraseña") },
-                        leadingIcon = { Text("🛡️") },
+                        leadingIcon = { Icon(Icons.Outlined.VerifiedUser, contentDescription = null, tint = EcoGreen) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         visualTransformation = PasswordVisualTransformation(),
@@ -249,7 +270,7 @@ fun RegisterScreenContent(
                             onCheckedChange = { termsAccepted = it },
                             colors = CheckboxDefaults.colors(checkedColor = EcoGreen)
                         )
-                        Text("Acepto los Términos de servicio", fontSize = 12.sp, color = Color.Gray)
+                        Text("Acepto los Términos de servicio", fontSize = 12.sp, color = EcoTextMuted)
                     }
 
                     if (errorMessage.isNotEmpty()) {
@@ -276,10 +297,8 @@ fun RegisterScreenContent(
                                     errorMessage = "Las contraseñas no coinciden"
                                 !termsAccepted ->
                                     errorMessage = "Acepta los términos y condiciones"
-                                else -> {
-                                    errorMessage = ""
-                                    onRegisterSuccess(fullName, email, selectedPet, petName)
-                                }
+                                else ->
+                                    errorMessage = onRegister(fullName, email, password, selectedPet, petName).orEmpty()
                             }
                         },
                         modifier = Modifier
@@ -299,7 +318,7 @@ fun RegisterScreenContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text("¿Ya tienes cuenta? ", fontSize = 13.sp, color = Color.Black)
+                Text("¿Ya tienes cuenta? ", fontSize = 13.sp, color = EcoTextPrimary)
                 Text(
                     "Iniciar sesión",
                     color = EcoGreen,

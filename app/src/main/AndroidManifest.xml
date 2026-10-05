@@ -2,6 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Aviso cuando la mascota tiene hambre (Android 13+ lo pide al usuario) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- EcoMapa: descargar el mapa y los puntos de reciclaje, y ubicar al usuario -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -48,6 +57,31 @@
             android:exported="false"
             android:label="Ajustes EcoPoints"
             android:theme="@style/Theme.EcoPoints" />
+
+        <activity
+            android:name=".EcoMapActivity"
+            android:exported="false"
+            android:label="EcoMapa"
+            android:theme="@style/Theme.EcoPoints" />
+
+        <receiver
+            android:name=".PetReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".ChallengeReminderReceiver"
+            android:exported="false" />
+
+        <!-- Permite que la app de cámara guarde la foto de evidencia de un reto -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

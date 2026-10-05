@@ -1,4 +1,4 @@
-# 📘 Entregables Académicos T1 - EcoPoints
+# Entregables Académicos T1 - EcoPoints
 **Curso:** Desarrollo de Aplicaciones Móviles (NRC 19586)  
 **Docente:** Ing. Gerardo Sarmiento Quistán  
 **Facultad:** Ingeniería | **Carrera:** Ingeniería de Sistemas Computacionales  
@@ -29,7 +29,7 @@
 * **Slogan:** *"Pequeñas acciones, grandes cambios"*
 * **Problema Identificado:** Falta de incentivos y hábitos estructurados para el reciclaje y las prácticas sustentables en los ciudadanos.
 * **Solución Propuesta:** Una aplicación móvil nativa con mecánicas de **gamificación** (mascota virtual guardiana, puntos acumulables, medallas y retos diarios) que premia las acciones ecológicas cotidianas.
-* **Mascotas Guías Disponibles:** Koala 🐨, Panda 🐼, Zorro 🦊, Gato 🐱 y Búho 🦉.
+* **Mascotas Guías Disponibles:** Koala, Panda, Zorro, Gato y Búho.
 
 ---
 
@@ -54,21 +54,21 @@
   * Persistencia 100% funcional en almacenamiento local.
 * **Limitaciones:**
   * En esta primera entrega (T1), el almacenamiento es puramente local (`SharedPreferences`), sin sincronización con bases de datos en la nube (Firebase/API REST prevista para entregas posteriores).
-  * El módulo de mapa se encuentra en fase de previsualización estática de puntos de acopio cercanos.
+  * El módulo EcoMapa (`EcoMapActivity`) muestra un mapa de OpenStreetMap (osmdroid) con la ubicación GPS del usuario y los puntos de reciclaje reales obtenidos de la API pública Overpass, filtrados por el radio elegido (1, 3 o 5 km).
 
 ---
 
 ### Diapositiva 5: Requerimientos del Sistema (Product Backlog)
 | ID | Historia de Usuario / Requerimiento | Prioridad | Estimación | Estado T1 |
 | :---: | :--- | :---: | :---: | :---: |
-| **US-01** | Como usuario, quiero registrarme eligiendo una mascota guardián y un nombre para ella. | Alta | 5 pts | ✅ 100% |
-| **US-02** | Como usuario, quiero iniciar sesión con mis credenciales para acceder a mi perfil. | Alta | 3 pts | ✅ 100% |
-| **US-03** | Como usuario nuevo, quiero recibir un bono de bienvenida (+50 pts) y una medalla inicial. | Media | 2 pts | ✅ 100% |
-| **US-04** | Como usuario, quiero visualizar mi saldo de EcoPoints y mi nivel actual. | Alta | 3 pts | ✅ 100% |
-| **US-05** | Como usuario, quiero alimentar y jugar con mi mascota consumiendo EcoPoints. | Alta | 5 pts | ✅ 100% |
-| **US-06** | Como usuario, quiero completar retos diarios para ganar puntos y aumentar mi nivel. | Alta | 5 pts | ✅ 100% |
-| **US-07** | Como usuario, quiero configurar mis notificaciones, ranking y unidades de mapa. | Media | 3 pts | ✅ 100% |
-| **US-08** | Como usuario, quiero ubicar puntos de reciclaje en un mapa interactivo con GPS. | Media | 8 pts | ⏳ T2 / Final |
+| **US-01** | Como usuario, quiero registrarme eligiendo una mascota guardián y un nombre para ella. | Alta | 5 pts | Completado (100%) |
+| **US-02** | Como usuario, quiero iniciar sesión con mis credenciales para acceder a mi perfil. | Alta | 3 pts | Completado (100%) |
+| **US-03** | Como usuario nuevo, quiero recibir un bono de bienvenida (+50 pts) y una medalla inicial. | Media | 2 pts | Completado (100%) |
+| **US-04** | Como usuario, quiero visualizar mi saldo de EcoPoints y mi nivel actual. | Alta | 3 pts | Completado (100%) |
+| **US-05** | Como usuario, quiero alimentar y jugar con mi mascota consumiendo EcoPoints. | Alta | 5 pts | Completado (100%) |
+| **US-06** | Como usuario, quiero completar retos diarios para ganar puntos y aumentar mi nivel. | Alta | 5 pts | Completado (100%) |
+| **US-07** | Como usuario, quiero configurar mis notificaciones, ranking, tema (claro/oscuro) y radio del EcoMapa. | Media | 3 pts | Completado (100%) |
+| **US-08** | Como usuario, quiero ubicar puntos de reciclaje en un mapa interactivo con GPS. | Media | 8 pts | Completado (100%) |
 
 ---
 
@@ -80,14 +80,14 @@
   * `HomeActivity`: Tablero central interactivo y gamificación.
   * `SettingsActivity`: Preferencias de sistema.
 * **Flujo de `Intents`** (claves centralizadas en `IntentExtras.kt`):
-  * `MainActivity` ➔ `Intent(EMAIL)` ➔ `RegisterActivity` (el correo ya escrito llega precargado)
-  * `RegisterActivity` ➔ `Intent(EMAIL)` ➔ `MainActivity` (al volver al login se devuelve el correo)
-  * `RegisterActivity` ➔ `Intent(USER_NAME, PET_LEVEL, SELECTED_PET, PET_NAME, IS_NEW_USER)` ➔ `WelcomeActivity`
-  * `MainActivity` ➔ `Intent(USER_NAME, PET_LEVEL, IS_NEW_USER)` ➔ `WelcomeActivity` / `HomeActivity`
-  * `WelcomeActivity` ➔ `Intent(USER_NAME, PET_LEVEL)` ➔ `HomeActivity`
-  * `WelcomeActivity` / `HomeActivity` ➔ `Intent(USER_NAME)` ➔ `SettingsActivity`
-  * `SettingsActivity` ➔ **resultado** `setResult(MAP_UNIT, RANKING_VISIBLE, NOTIFICATIONS_ENABLED)` ➔ `HomeActivity` (`registerForActivityResult`)
-  * `HomeActivity` / `WelcomeActivity` ➔ `Intent(FLAG_ACTIVITY_CLEAR_TASK, LOGGED_OUT)` ➔ `MainActivity` (Cierre de sesión seguro).
+  * `MainActivity` → `Intent(EMAIL)` → `RegisterActivity` (el correo ya escrito llega precargado)
+  * `RegisterActivity` → `Intent(EMAIL)` → `MainActivity` (al volver al login se devuelve el correo)
+  * `RegisterActivity` → `Intent(USER_NAME, PET_LEVEL, SELECTED_PET, PET_NAME, IS_NEW_USER)` → `WelcomeActivity`
+  * `MainActivity` → `Intent(USER_NAME, PET_LEVEL, IS_NEW_USER)` → `WelcomeActivity` / `HomeActivity`
+  * `WelcomeActivity` → `Intent(USER_NAME, PET_LEVEL)` → `HomeActivity`
+  * `WelcomeActivity` / `HomeActivity` → `Intent(USER_NAME)` → `SettingsActivity`
+  * `SettingsActivity` → **resultado** `setResult(MAP_RADIUS_KM, RANKING_VISIBLE, NOTIFICATIONS_ENABLED)` → `HomeActivity` (`registerForActivityResult`)
+  * `HomeActivity` / `WelcomeActivity` → `Intent(FLAG_ACTIVITY_CLEAR_TASK, LOGGED_OUT)` → `MainActivity` (Cierre de sesión seguro).
 
 ---
 
@@ -98,7 +98,7 @@
   * Economía del juego: `ecopoints_balance` (gastable) y `ecopoints_historical` (nivel permanente).
   * Estadísticas de la mascota: `pet_level`, `pet_hunger` (0-100), `pet_happiness` (0-100), `last_fed_timestamp`.
   * Retos: `user_challenges` (lista JSON con los retos elegidos por el usuario, su plazo de 1/3/7/14 días y su estado), `daily_challenge_progress`.
-  * Configuración: `notifications_enabled`, `ranking_visible`, `map_distance_unit`.
+  * Configuración: `notifications_enabled`, `ranking_visible`, `eco_map_search_radius_km`, `theme_mode`, `large_text`.
 
 ---
 
@@ -107,8 +107,8 @@
 * 1. Pantalla de inicio de sesión con validaciones.
 * 2. Proceso de registro y selección dinámica de mascota.
 * 3. Pantalla de bienvenida con bono otorgado.
-* 4. Interacción en el Dashboard: Marcar un reto diario ➔ Aumento automático del saldo de EcoPoints en vivo.
-* 5. Alimentar a la mascota ➔ Descuento de puntos y recuperación de energía y felicidad.
+* 4. Interacción en el Dashboard: Marcar un reto diario → Aumento automático del saldo de EcoPoints en vivo.
+* 5. Alimentar a la mascota → Descuento de puntos y recuperación de energía y felicidad.
 * 6. Ajustes y persistencia tras reinicio de la app.
 
 ---
@@ -171,13 +171,13 @@ En la actualidad, uno de los mayores desafíos ambientales en las áreas urbanas
 ## CAPÍTULO II: REQUERIMIENTOS DEL SISTEMA Y PRODUCT BACKLOG
 
 ### 2.1. Requerimientos Funcionales (RF)
-* **RF-01 (Autenticación y Sesión):** El sistema debe permitir a los usuarios iniciar sesión con correo y contraseña (mínimo 8 caracteres) y mantener la sesión abierta mediante persistencia local.
+* **RF-01 (Autenticación y Sesión):** El sistema debe permitir a los usuarios iniciar sesión con correo y contraseña (mínimo 8 caracteres) y mantener la sesión abierta mediante persistencia local. La contraseña se guarda solo como hash PBKDF2 con sal aleatoria (nunca en texto plano) y puede recuperarse confirmando el nombre de usuario y el correo registrados.
 * **RF-02 (Registro con Mascota Guía):** El sistema debe permitir al usuario registrar su nombre, correo, elegir una especie de mascota (Koala, Panda, Zorro, Gato, Búho) y asignarle un nombre personalizado.
 * **RF-03 (Bono de Bienvenida):** Al completar el registro, el sistema debe acreditar automáticamente 50 EcoPoints y desbloquear la insignia de nivel 1 ("Amigo de la Naturaleza").
 * **RF-04 (Dashboard de Gamificación):** La pantalla principal debe mostrar en tiempo real el saldo de EcoPoints, el nivel y el estado vital de la mascota (Hambre y Felicidad de 0 a 100%).
 * **RF-05 (Interacción con Mascota):** El usuario podrá gastar 10 EcoPoints para alimentar a su mascota (recuperando 20% de energía y 10% de felicidad) o interactuar con ella para aumentar su felicidad.
 * **RF-06 (Retos Ecológicos):** El usuario elige qué retos sustentables quiere cumplir (movilidad en bicicleta, reciclaje de botellas, o uno propio), define su plazo (1, 3, 7 o 14 días), puede editarlos y eliminarlos, y al marcarlos como cumplidos suma EcoPoints a su cuenta instantáneamente (más plazo, más recompensa). Marcar un reto se puede deshacer mientras los puntos no se hayan gastado.
-* **RF-07 (Configuración y Ajustes):** El sistema debe permitir configurar la visibilidad en el ranking, recordatorios de retos y unidades de medición métricas/imperiales.
+* **RF-07 (Configuración y Ajustes):** El sistema debe permitir configurar la visibilidad en el ranking, recordatorios de retos y de la mascota, tema claro/oscuro, tamaño de texto, confirmación de gastos, vibración y radio de búsqueda del EcoMapa.
 
 ### 2.2. Requerimientos No Funcionales (RNF)
 * **RNF-01 (Rendimiento):** Las transiciones entre actividades y el refresco del estado visual deben ejecutarse a 60 fps sin bloqueos en el hilo principal (`Main Thread`).
@@ -190,7 +190,7 @@ Se organizó el trabajo bajo el marco de trabajo ágil Scrum:
 1. **Épica 1: Identidad y Onboarding:** Historias de usuario US-01, US-02 y US-03 (Completadas al 100%).
 2. **Épica 2: Gamificación y Core Loop:** Historias US-04, US-05 y US-06 (Completadas al 100%).
 3. **Épica 3: Ajustes y Preferencias:** Historia US-07 (Completada al 100%).
-4. **Épica 4: EcoMapa y Geolocalización:** Historia US-08 (Fase de previsualización para la T2).
+4. **Épica 4: EcoMapa y Geolocalización:** Historia US-08 (mapa con GPS y puntos de reciclaje reales de OpenStreetMap).
 
 ---
 
@@ -202,7 +202,7 @@ El proyecto cumple estrictamente con el principio de navegación desacoplada med
 * **`RegisterActivity`:** Captura las preferencias del nuevo usuario y empaqueta en el `Intent` los datos seleccionados (`EXTRA_USER_NAME`, `EXTRA_PET_LEVEL`, `EXTRA_SELECTED_PET`) despachándolos a `WelcomeActivity`.
 * **`WelcomeActivity`:** Desempaqueta los extras del `Intent` o de `PreferencesManager` y despliega la animación de bienvenida. Conecta hacia `HomeActivity` o `SettingsActivity`.
 * **`HomeActivity`:** Núcleo de la experiencia donde convergen el saldo, la mascota y los retos.
-* **`SettingsActivity`:** Control de preferencias del sistema. Recibe el nombre del usuario por `Intent` y devuelve a la actividad que la abrió el resultado de los ajustes (unidad de mapa, ranking y notificaciones).
+* **`SettingsActivity`:** Control de preferencias del sistema. Recibe el nombre del usuario por `Intent` y devuelve a la actividad que la abrió el resultado de los ajustes (radio del EcoMapa, ranking y notificaciones).
 
 ### 3.2. Diseño de Interfaces (UI/UX) con Jetpack Compose
 * **Paradigma Declarativo:** La interfaz no utiliza layouts XML tradicionales, sino funciones `@Composable` modulares y reactivas, facilitando la recomposición instantánea de las barras de progreso y el contador de puntos.
