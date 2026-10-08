@@ -1,14 +1,20 @@
-package com.example.ecopoints.app
+package com.example.ecopoints.app.ui.welcome
 
-import android.content.Intent
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -17,100 +23,61 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ecopoints.app.data.EcoLevel
-import com.example.ecopoints.app.data.PreferencesManager
-import com.example.ecopoints.app.ui.theme.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ecopoints.app.R
+import com.example.ecopoints.app.ui.components.petImageRes
+import com.example.ecopoints.app.ui.theme.EcoBackground
+import com.example.ecopoints.app.ui.theme.EcoCard
+import com.example.ecopoints.app.ui.theme.EcoError
+import com.example.ecopoints.app.ui.theme.EcoGold
+import com.example.ecopoints.app.ui.theme.EcoGoldContainer
+import com.example.ecopoints.app.ui.theme.EcoGreen
+import com.example.ecopoints.app.ui.theme.EcoGreenDark
+import com.example.ecopoints.app.ui.theme.EcoGreenLight
+import com.example.ecopoints.app.ui.theme.EcoTextMuted
+import com.example.ecopoints.app.ui.theme.EcoTextSecondary
 
-class WelcomeActivity : ComponentActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val prefs = PreferencesManager(this)
-
-        // Recepción de parámetros por Intent (Criterio P03)
-        val userName = intent.getStringExtra(IntentExtras.USER_NAME) ?: prefs.getUserName().ifBlank { "EcoAmigo" }
-        val petLevel = intent.getStringExtra(IntentExtras.PET_LEVEL) ?: prefs.getPetLevel()
-        val isNewUser = intent.getBooleanExtra(IntentExtras.IS_NEW_USER, false)
-
-        setContent {
-            EcoPointsTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = EcoBackground) {
-                    WelcomeScreenContent(
-                        userName = userName,
-                        petLevel = petLevel,
-                        isNewUser = isNewUser,
-                        balance = prefs.getEcoPointsBalance(),
-                        level = EcoLevel.forPoints(prefs.getEcoPointsHistorical()),
-                        onGoHome = {
-                            // Comunicación hacia HomeActivity mediante Intent
-                            val intent = Intent(this, HomeActivity::class.java).apply {
-                                putExtra(IntentExtras.USER_NAME, userName)
-                                putExtra(IntentExtras.PET_LEVEL, petLevel)
-                            }
-                            startActivity(intent)
-                            finish()
-                        },
-                        onOpenSettings = {
-                            // Comunicación hacia SettingsActivity mediante Intent
-                            val intent = Intent(this, SettingsActivity::class.java).apply {
-                                putExtra(IntentExtras.USER_NAME, userName)
-                            }
-                            startActivity(intent)
-                        },
-                        onLogout = {
-                            prefs.setUserLoggedIn(false)
-                            val intent = Intent(this, MainActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                putExtra(IntentExtras.LOGGED_OUT, true)
-                            }
-                            startActivity(intent)
-                            finish()
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
+/** Bienvenida tras iniciar sesión o registrarse. Los datos salen de [WelcomeViewModel]. */
 @Composable
-fun WelcomeScreenContent(
-    userName: String,
-    petLevel: String,
+fun WelcomeScreen(
+    viewModel: WelcomeViewModel,
     isNewUser: Boolean,
-    balance: Int,
-    level: EcoLevel,
     onGoHome: () -> Unit,
     onOpenSettings: () -> Unit,
-    onLogout: () -> Unit
+    onLoggedOut: () -> Unit
 ) {
-    val petImageRes = when {
-        petLevel.contains("Panda", ignoreCase = true) -> R.drawable.panda_ecopoints
-        petLevel.contains("Zorro", ignoreCase = true) -> R.drawable.zorro_ecopoints
-        petLevel.contains("Gato", ignoreCase = true) -> R.drawable.gato_ecopoints
-        petLevel.contains("Búho", ignoreCase = true) || petLevel.contains("Buho", ignoreCase = true) -> R.drawable.buho_ecopoints
-        else -> R.drawable.koala_ecopoints
-    }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val petDisplayName = if (petLevel.contains("(")) {
-        petLevel.substringAfter("(").substringBefore(")")
-    } else {
-        petLevel.substringBefore(" ")
+    if (state.isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(EcoBackground),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = EcoGreen)
+        }
+        return
     }
-
-    val scrollState = rememberScrollState()
 
     Box(
         modifier = Modifier
@@ -120,7 +87,7 @@ fun WelcomeScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .verticalScroll(rememberScrollState())
                 .padding(top = 50.dp, start = 20.dp, end = 20.dp, bottom = 25.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -133,7 +100,7 @@ fun WelcomeScreenContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "¡Bienvenido, $userName!",
+                    "¡Bienvenido, ${state.userName}!",
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = EcoGreenDark,
@@ -153,7 +120,7 @@ fun WelcomeScreenContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "¡Hola! Soy tu guardián $petDisplayName",
+                            "¡Hola! Soy tu guardián ${state.petDisplayName}",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
                             color = EcoGreenDark
@@ -178,7 +145,7 @@ fun WelcomeScreenContent(
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(id = petImageRes),
+                    painter = painterResource(id = petImageRes(state.petSpecies)),
                     contentDescription = "Mascota Elegida",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.size(220.dp)
@@ -199,7 +166,11 @@ fun WelcomeScreenContent(
                         color = EcoGreenDark
                     )
                     Text(
-                        if (isNewUser) "Hemos preparado tu espacio ecológico" else "Tienes $balance EcoPoints esperando en tu alcancía verde",
+                        if (isNewUser) {
+                            "Hemos preparado tu espacio ecológico"
+                        } else {
+                            "Tienes ${state.balance} EcoPoints esperando en tu alcancía verde"
+                        },
                         fontSize = 12.sp,
                         color = EcoTextMuted
                     )
@@ -244,11 +215,16 @@ fun WelcomeScreenContent(
                             Icon(Icons.Filled.EmojiEvents, contentDescription = null, tint = EcoGold, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                Text(if (isNewUser) "Insignia Desbloqueada" else "Tu insignia actual", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = EcoGold)
-                                Text("\"${level.badge}\"", fontSize = 11.sp, color = EcoTextSecondary)
+                                Text(
+                                    if (isNewUser) "Insignia Desbloqueada" else "Tu insignia actual",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = EcoGold
+                                )
+                                Text("\"${state.level.badge}\"", fontSize = 11.sp, color = EcoTextSecondary)
                             }
                         }
-                        Text("Nivel ${level.number}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = EcoGold)
+                        Text("Nivel ${state.level.number}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = EcoGold)
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -285,7 +261,7 @@ fun WelcomeScreenContent(
                         }
 
                         OutlinedButton(
-                            onClick = onLogout,
+                            onClick = { viewModel.logout(onLoggedOut) },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(38.dp),

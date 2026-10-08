@@ -1,7 +1,6 @@
 package com.example.ecopoints.app.ui.theme
 
 import android.app.Activity
-import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -10,37 +9,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
 import androidx.core.view.WindowCompat
-import com.example.ecopoints.app.data.PreferencesManager
-
-/** Tema elegido en Ajustes. */
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
-
-/**
- * Preferencias de apariencia compartidas por todas las pantallas. Son estado observable:
- * al cambiarlas en Ajustes, las pantallas abiertas se redibujan al instante.
- */
-object AppearanceSettings {
-    var themeMode by mutableStateOf(ThemeMode.SYSTEM)
-    var largeText by mutableStateOf(false)
-    private var loaded = false
-
-    fun load(context: Context) {
-        if (loaded) return
-        val prefs = PreferencesManager(context)
-        themeMode = prefs.getThemeMode()
-        largeText = prefs.isLargeTextEnabled()
-        loaded = true
-    }
-}
+import com.example.ecopoints.app.data.model.ThemeMode
 
 /** Escala del texto cuando está activado "Texto grande". */
 private const val LARGE_TEXT_SCALE = 1.15f
@@ -70,11 +44,17 @@ private fun colorSchemeFor(palette: EcoPalette, dark: Boolean): ColorScheme {
     )
 }
 
+/**
+ * Tema de EcoPoints. [themeMode] y [largeText] vienen de DataStore (Ajustes): al cambiarlos
+ * en la pantalla de Ajustes, todas las pantallas abiertas se redibujan al instante.
+ */
 @Composable
-fun EcoPointsTheme(content: @Composable () -> Unit) {
-    AppearanceSettings.load(LocalContext.current)
-
-    val dark = when (AppearanceSettings.themeMode) {
+fun EcoPointsTheme(
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    largeText: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    val dark = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
@@ -94,7 +74,7 @@ fun EcoPointsTheme(content: @Composable () -> Unit) {
     }
 
     val density = LocalDensity.current
-    val textScale = if (AppearanceSettings.largeText) LARGE_TEXT_SCALE else 1f
+    val textScale = if (largeText) LARGE_TEXT_SCALE else 1f
 
     CompositionLocalProvider(
         LocalEcoPalette provides palette,

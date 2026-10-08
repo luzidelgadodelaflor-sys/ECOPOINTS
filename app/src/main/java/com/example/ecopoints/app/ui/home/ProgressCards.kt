@@ -1,4 +1,4 @@
-package com.example.ecopoints.app
+package com.example.ecopoints.app.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

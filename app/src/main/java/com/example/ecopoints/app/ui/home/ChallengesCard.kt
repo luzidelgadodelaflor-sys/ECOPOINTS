@@ -1,4 +1,4 @@
-package com.example.ecopoints.app
+package com.example.ecopoints.app.ui.home
 
 import android.content.ActivityNotFoundException
 import android.graphics.BitmapFactory
@@ -65,17 +65,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.example.ecopoints.app.data.EcoChallenge
-import com.example.ecopoints.app.data.PreferencesManager
+import com.example.ecopoints.app.R
+import com.example.ecopoints.app.util.DateUtils
+import com.example.ecopoints.app.util.Validators
 import com.example.ecopoints.app.ui.theme.EcoCard
 import com.example.ecopoints.app.ui.theme.EcoError
 import com.example.ecopoints.app.ui.theme.EcoErrorContainer
@@ -87,9 +87,6 @@ import com.example.ecopoints.app.ui.theme.EcoTextMuted
 import com.example.ecopoints.app.ui.theme.EcoTextPrimary
 import com.example.ecopoints.app.ui.theme.EcoTextSecondary
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.ceil
 
 private data class ChallengeSuggestion(val icon: String, val title: String, val description: String)
@@ -116,7 +113,7 @@ private fun challengeIcon(key: String): ImageVector = when (key) {
     else -> Icons.Filled.Eco
 }
 
-private fun durationLabel(days: Int) = if (days == 1) "1 día" else "$days días"
+private fun durationLabel(days: Int) = EcoChallenge.durationLabel(days)
 
 private fun deadlineText(challenge: EcoChallenge, now: Long): String = when {
     challenge.completed -> "¡Cumplido!"
@@ -133,25 +130,21 @@ private fun deadlineText(challenge: EcoChallenge, now: Long): String = when {
  * Tarjeta "Mis Retos": el usuario elige qué retos quiere cumplir, define el plazo
  * (1, 3, 7 o 14 días), puede editarlos y borrarlos. Para cumplir un reto debe enviar
  * una foto como evidencia; entonces gana los puntos y el reto pasa al historial.
- * Todo se guarda en SharedPreferences.
+ * Los datos viven en Room: la tarjeta solo dibuja la lista y avisa al ViewModel lo que el usuario hace.
  */
 @Composable
-fun ChallengesCard(prefs: PreferencesManager, onBalanceChanged: () -> Unit) {
-    val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
-    var challenges by remember { mutableStateOf(prefs.getChallenges()) }
+fun ChallengesCard(
+    challenges: List<EcoChallenge>,
+    onAdd: (icon: String, title: String, description: String, days: Int) -> Unit,
+    onUpdate: (id: Long, icon: String, title: String, description: String, days: Int) -> Unit,
+    onDelete: (id: Long) -> Unit,
+    onComplete: (id: Long, evidencePath: String) -> Unit
+) {
     var showDialog by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<EcoChallenge?>(null) }
     var pendingDelete by remember { mutableStateOf<EcoChallenge?>(null) }
     var completing by remember { mutableStateOf<EcoChallenge?>(null) }
     var showHistory by remember { mutableStateOf(false) }
-
-    fun update(newList: List<EcoChallenge>) {
-        challenges = newList
-        prefs.saveChallenges(newList)
-    }
-
-    fun toast(message: String) = Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 
     val now = System.currentTimeMillis()
     val active = challenges.filter { !it.completed }
@@ -336,25 +329,10 @@ fun ChallengesCard(prefs: PreferencesManager, onBalanceChanged: () -> Unit) {
             },
             onSave = { icon, title, description, days ->
                 val target = editing
-                val savedAt = System.currentTimeMillis()
                 if (target == null) {
-                    update(challenges + EcoChallenge(savedAt, icon, title, description, days, savedAt))
-                    toast("Reto agregado: tienes ${durationLabel(days)} para cumplirlo")
+                    onAdd(icon, title, description, days)
                 } else {
-                    update(challenges.map {
-                        if (it.id != target.id) it else {
-                            // El plazo vuelve a contar desde hoy si lo cambian o si ya había vencido.
-                            val restart = days != it.durationDays || it.isExpired(savedAt)
-                            it.copy(
-                                icon = icon,
-                                title = title,
-                                description = description,
-                                durationDays = days,
-                                startMillis = if (restart) savedAt else it.startMillis
-                            )
-                        }
-                    })
-                    toast("Reto actualizado")
+                    onUpdate(target.id, icon, title, description, days)
                 }
                 showDialog = false
                 editing = null
@@ -367,18 +345,8 @@ fun ChallengesCard(prefs: PreferencesManager, onBalanceChanged: () -> Unit) {
             challenge = target,
             onDismiss = { completing = null },
             onConfirm = { evidencePath ->
-                if (prefs.isVibrationEnabled()) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                prefs.earnEcoPoints(target.points)
-                update(challenges.map {
-                    if (it.id != target.id) it else it.copy(
-                        completed = true,
-                        completedMillis = System.currentTimeMillis(),
-                        evidencePath = evidencePath
-                    )
-                })
-                onBalanceChanged()
+                onComplete(target.id, evidencePath)
                 completing = null
-                toast("¡Reto superado! +${target.points} EcoPoints")
             }
         )
     }
@@ -391,7 +359,7 @@ fun ChallengesCard(prefs: PreferencesManager, onBalanceChanged: () -> Unit) {
             text = { Text("«${target.title}» se quitará de tu lista.") },
             confirmButton = {
                 TextButton(onClick = {
-                    update(challenges.filter { it.id != target.id })
+                    onDelete(target.id)
                     pendingDelete = null
                 }) { Text("Eliminar", color = EcoError, fontWeight = FontWeight.Bold) }
             },
@@ -440,7 +408,7 @@ private fun CompletedChallengeRow(challenge: EcoChallenge) {
                 Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = EcoGreen, modifier = Modifier.size(13.dp))
                 Spacer(modifier = Modifier.width(3.dp))
                 Text(
-                    if (challenge.completedMillis > 0) "Cumplido el ${formatDate(challenge.completedMillis)}" else "Cumplido",
+                    if (challenge.completedMillis > 0) "Cumplido el ${DateUtils.formatDateTime(challenge.completedMillis)}" else "Cumplido",
                     fontSize = 11.sp,
                     color = EcoTextSecondary
                 )
@@ -578,9 +546,6 @@ private fun loadEvidence(path: String, maxSize: Int): ImageBitmap? {
     return BitmapFactory.decodeFile(path, options)?.asImageBitmap()
 }
 
-private fun formatDate(millis: Long): String =
-    SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(millis))
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChallengeDialog(
@@ -592,7 +557,7 @@ private fun ChallengeDialog(
     var title by remember { mutableStateOf(initial?.title ?: "") }
     var description by remember { mutableStateOf(initial?.description ?: "") }
     var days by remember { mutableStateOf(initial?.durationDays ?: 3) }
-    var showTitleError by remember { mutableStateOf(false) }
+    var titleError by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -618,7 +583,7 @@ private fun ChallengeDialog(
                                     icon = s.icon
                                     title = s.title
                                     description = s.description
-                                    showTitleError = false
+                                    titleError = null
                                 },
                                 leadingIcon = {
                                     Icon(challengeIcon(s.icon), contentDescription = null, tint = EcoGreen, modifier = Modifier.size(16.dp))
@@ -633,13 +598,13 @@ private fun ChallengeDialog(
                     value = title,
                     onValueChange = {
                         title = it
-                        showTitleError = false
+                        titleError = null
                     },
                     label = { Text("Nombre del reto") },
                     singleLine = true,
-                    isError = showTitleError,
-                    supportingText = if (showTitleError) {
-                        { Text("Escribe un nombre para tu reto") }
+                    isError = titleError != null,
+                    supportingText = if (titleError != null) {
+                        { Text(titleError.orEmpty()) }
                     } else null,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -689,8 +654,9 @@ private fun ChallengeDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (title.isBlank()) {
-                        showTitleError = true
+                    val error = Validators.challengeTitleError(title)
+                    if (error != null) {
+                        titleError = error
                     } else {
                         onSave(icon, title.trim(), description.trim(), days)
                     }

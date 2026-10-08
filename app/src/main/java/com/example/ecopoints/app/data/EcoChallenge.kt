@@ -15,7 +15,12 @@ data class EcoChallenge(
     /** Momento en que se envió la evidencia (0 si aún no se cumple). */
     val completedMillis: Long = 0L,
     /** Ruta de la foto de evidencia dentro del almacenamiento privado de la app. */
-    val evidencePath: String = ""
+    val evidencePath: String = "",
+    /**
+     * Vencimiento para el que ya se mostró el aviso "se acaba el tiempo" (0 si aún no se avisó).
+     * Si el usuario edita el reto y cambia el plazo, el vencimiento cambia y vuelve a avisarse.
+     */
+    val remindedDeadline: Long = 0L
 ) {
     val points: Int get() = pointsForDuration(durationDays)
     val deadlineMillis: Long get() = startMillis + durationDays * DAY_MILLIS
@@ -30,8 +35,8 @@ data class EcoChallenge(
     val reminderMillis: Long
         get() = deadlineMillis - if (durationDays <= 1) 3 * HOUR_MILLIS else DAY_MILLIS
 
-    /** Identifica el aviso de este plazo concreto (cambia si se edita el plazo). */
-    val reminderKey: String get() = "$id:$deadlineMillis"
+    /** Ya se avisó de este plazo concreto. */
+    val alreadyReminded: Boolean get() = remindedDeadline == deadlineMillis
 
     companion object {
         const val HOUR_MILLIS = 60L * 60 * 1000
@@ -45,5 +50,7 @@ data class EcoChallenge(
             days <= 7 -> 50
             else -> 90
         }
+
+        fun durationLabel(days: Int): String = if (days == 1) "1 día" else "$days días"
     }
 }

@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
+        android:name=".EcoPointsApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -32,37 +33,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".RegisterActivity"
-            android:exported="false"
-            android:label="Registro EcoPoints"
-            android:theme="@style/Theme.EcoPoints"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".WelcomeActivity"
-            android:exported="false"
-            android:label="Bienvenida EcoPoints"
-            android:theme="@style/Theme.EcoPoints" />
-
-        <activity
-            android:name=".HomeActivity"
-            android:exported="false"
-            android:label="Panel Principal EcoPoints"
-            android:theme="@style/Theme.EcoPoints" />
-
-        <activity
-            android:name=".SettingsActivity"
-            android:exported="false"
-            android:label="Ajustes EcoPoints"
-            android:theme="@style/Theme.EcoPoints" />
-
-        <activity
-            android:name=".EcoMapActivity"
-            android:exported="false"
-            android:label="EcoMapa"
-            android:theme="@style/Theme.EcoPoints" />
 
         <receiver
             android:name=".PetReminderReceiver"

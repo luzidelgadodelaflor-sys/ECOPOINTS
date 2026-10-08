@@ -1,4 +1,4 @@
-package com.example.ecopoints.app
+package com.example.ecopoints.app.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ecopoints.app.domain.RankingBoard
+import com.example.ecopoints.app.domain.RankingEntry
 import com.example.ecopoints.app.ui.theme.EcoCard
 import com.example.ecopoints.app.ui.theme.EcoGold
 import com.example.ecopoints.app.ui.theme.EcoGreen
@@ -37,33 +39,14 @@ import com.example.ecopoints.app.ui.theme.EcoGreenLight
 import com.example.ecopoints.app.ui.theme.EcoTextMuted
 import com.example.ecopoints.app.ui.theme.EcoTextPrimary
 
-private data class RankingEntry(val name: String, val points: Int, val isUser: Boolean = false)
-
-/**
- * Jugadores de ejemplo: la app todavía no tiene servidor, así que el ranking compara
- * al usuario con esta comunidad de muestra. Al conectar un backend se reemplaza esta lista.
- */
-private val sampleCommunity = listOf(
-    RankingEntry("EcoLuna", 420),
-    RankingEntry("Verde_Mateo", 355),
-    RankingEntry("RecicladorPro", 290),
-    RankingEntry("SolarSofi", 240),
-    RankingEntry("Hoja_Andina", 160),
-    RankingEntry("BiciCarlos", 120),
-    RankingEntry("AguaClara", 75)
-)
-
-private const val TOP_SIZE = 5
-
 /**
  * Ranking por EcoPoints históricos. Si el usuario desactivó "Visible en el Ranking
  * público", su fila aparece como anónima.
  */
 @Composable
 fun RankingCard(userName: String, historicalPoints: Int, visible: Boolean) {
-    val ranking = (sampleCommunity + RankingEntry(userName, historicalPoints, isUser = true))
-        .sortedByDescending { it.points }
-    val userPosition = ranking.indexOfFirst { it.isUser } + 1
+    val ranking = RankingBoard.build(userName, historicalPoints)
+    val userPosition = RankingBoard.positionOf(ranking)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -92,11 +75,11 @@ fun RankingCard(userName: String, historicalPoints: Int, visible: Boolean) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            ranking.take(TOP_SIZE).forEachIndexed { index, entry ->
+            ranking.take(RankingBoard.TOP_SIZE).forEachIndexed { index, entry ->
                 RankingRow(position = index + 1, entry = entry, visible = visible)
             }
             // Si el usuario no está en el top, se muestra igual su posición al final
-            if (userPosition > TOP_SIZE) {
+            if (userPosition > RankingBoard.TOP_SIZE) {
                 Text("···", color = EcoTextMuted, modifier = Modifier.padding(start = 12.dp))
                 RankingRow(position = userPosition, entry = ranking[userPosition - 1], visible = visible)
             }

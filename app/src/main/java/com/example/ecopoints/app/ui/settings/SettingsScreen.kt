@@ -1,11 +1,17 @@
-package com.example.ecopoints.app
+package com.example.ecopoints.app.ui.settings
 
-import android.content.Intent
-import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -19,75 +25,54 @@ import androidx.compose.material.icons.outlined.Radar
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ecopoints.app.data.PreferencesManager
-import com.example.ecopoints.app.ui.theme.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ecopoints.app.data.model.ThemeMode
+import com.example.ecopoints.app.domain.EcoRules
+import com.example.ecopoints.app.ui.theme.EcoBackground
+import com.example.ecopoints.app.ui.theme.EcoCard
+import com.example.ecopoints.app.ui.theme.EcoGreen
+import com.example.ecopoints.app.ui.theme.EcoGreenDark
+import com.example.ecopoints.app.ui.theme.EcoTextMuted
+import com.example.ecopoints.app.ui.theme.EcoTextPrimary
 
-class SettingsActivity : ComponentActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val prefs = PreferencesManager(this)
-
-        // Dato recibido por Intent desde HomeActivity o WelcomeActivity
-        val userName = intent.getStringExtra(IntentExtras.USER_NAME) ?: prefs.getUserName().ifBlank { "EcoAmigo" }
-
-        setContent {
-            EcoPointsTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = EcoBackground) {
-                    SettingsScreenContent(
-                        userName = userName,
-                        prefs = prefs,
-                        onSettingsChanged = {
-                            // Resultado que vuelve a la actividad que abrió los ajustes
-                            val result = Intent().apply {
-                                putExtra(IntentExtras.MAP_RADIUS_KM, prefs.getMapSearchRadiusKm())
-                                putExtra(IntentExtras.RANKING_VISIBLE, prefs.isRankingVisible())
-                                putExtra(IntentExtras.NOTIFICATIONS_ENABLED, prefs.areNotificationsEnabled())
-                            }
-                            setResult(RESULT_OK, result)
-                        },
-                        onBack = {
-                            // Cierra la actividad y regresa a la actividad anterior
-                            finish()
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
+/**
+ * Ajustes de EcoPoints. Cada cambio se guarda al instante en DataStore mediante [SettingsViewModel];
+ * "Guardar y Volver" solo regresa a la pantalla anterior.
+ */
 @Composable
-fun SettingsScreenContent(
-    userName: String,
-    prefs: PreferencesManager,
-    onSettingsChanged: () -> Unit,
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
     onBack: () -> Unit
 ) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val settings = state.settings
     val context = LocalContext.current
-    var notificationsEnabled by remember { mutableStateOf(prefs.areNotificationsEnabled()) }
-    var petRemindersEnabled by remember { mutableStateOf(prefs.arePetRemindersEnabled()) }
-    var rankingVisible by remember { mutableStateOf(prefs.isRankingVisible()) }
-    var confirmSpend by remember { mutableStateOf(prefs.isConfirmSpendEnabled()) }
-    var vibrationEnabled by remember { mutableStateOf(prefs.isVibrationEnabled()) }
-    var mapRadius by remember { mutableIntStateOf(prefs.getMapSearchRadiusKm()) }
-
-    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(scrollState)
+            .background(EcoBackground)
+            .verticalScroll(rememberScrollState())
             .padding(top = 50.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
     ) {
         Row(
@@ -104,7 +89,7 @@ fun SettingsScreenContent(
             )
         }
         Text(
-            "Preferencias de $userName",
+            "Preferencias de ${state.userName}",
             fontSize = 13.sp,
             color = EcoTextMuted,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -121,11 +106,8 @@ fun SettingsScreenContent(
                     ThemeMode.DARK to "Oscuro"
                 ).forEach { (mode, label) ->
                     FilterChip(
-                        selected = AppearanceSettings.themeMode == mode,
-                        onClick = {
-                            AppearanceSettings.themeMode = mode
-                            prefs.setThemeMode(mode)
-                        },
+                        selected = settings.themeMode == mode,
+                        onClick = { viewModel.setThemeMode(mode) },
                         label = { Text(label) }
                     )
                 }
@@ -136,11 +118,8 @@ fun SettingsScreenContent(
             SettingSwitchRow(
                 icon = Icons.Outlined.TextFields,
                 label = "Texto grande",
-                checked = AppearanceSettings.largeText,
-                onCheckedChange = {
-                    AppearanceSettings.largeText = it
-                    prefs.setLargeTextEnabled(it)
-                }
+                checked = settings.largeText,
+                onCheckedChange = viewModel::setLargeText
             )
         }
 
@@ -150,32 +129,23 @@ fun SettingsScreenContent(
             SettingSwitchRow(
                 icon = Icons.Outlined.NotificationsActive,
                 label = "Avisos de retos por vencer",
-                checked = notificationsEnabled,
+                checked = settings.challengeRemindersEnabled,
                 onCheckedChange = {
-                    notificationsEnabled = it
-                    prefs.setNotificationsEnabled(it)
-                    onSettingsChanged()
-                    Toast.makeText(context, "Ajuste guardado en SharedPreferences", Toast.LENGTH_SHORT).show()
+                    viewModel.setChallengeReminders(it)
+                    Toast.makeText(context, "Ajuste guardado en DataStore", Toast.LENGTH_SHORT).show()
                 }
             )
             SettingSwitchRow(
                 icon = Icons.Outlined.Pets,
                 label = "Avisos de la mascota con hambre",
-                checked = petRemindersEnabled,
-                onCheckedChange = {
-                    petRemindersEnabled = it
-                    prefs.setPetRemindersEnabled(it)
-                }
+                checked = settings.petRemindersEnabled,
+                onCheckedChange = viewModel::setPetReminders
             )
             SettingSwitchRow(
                 icon = Icons.Outlined.Leaderboard,
                 label = "Visible en el Ranking público",
-                checked = rankingVisible,
-                onCheckedChange = {
-                    rankingVisible = it
-                    prefs.setRankingVisible(it)
-                    onSettingsChanged()
-                }
+                checked = settings.rankingVisible,
+                onCheckedChange = viewModel::setRankingVisible
             )
         }
 
@@ -185,20 +155,14 @@ fun SettingsScreenContent(
             SettingSwitchRow(
                 icon = Icons.Outlined.WarningAmber,
                 label = "Confirmar antes de gastar EcoPoints",
-                checked = confirmSpend,
-                onCheckedChange = {
-                    confirmSpend = it
-                    prefs.setConfirmSpendEnabled(it)
-                }
+                checked = settings.confirmSpend,
+                onCheckedChange = viewModel::setConfirmSpend
             )
             SettingSwitchRow(
                 icon = Icons.Outlined.Vibration,
                 label = "Vibración",
-                checked = vibrationEnabled,
-                onCheckedChange = {
-                    vibrationEnabled = it
-                    prefs.setVibrationEnabled(it)
-                }
+                checked = settings.vibrationEnabled,
+                onCheckedChange = viewModel::setVibration
             )
         }
 
@@ -208,14 +172,10 @@ fun SettingsScreenContent(
             SettingLabel(Icons.Outlined.Radar, "Radio de búsqueda")
             Spacer(modifier = Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                PreferencesManager.MAP_RADIUS_OPTIONS_KM.forEach { km ->
+                EcoRules.MAP_RADIUS_OPTIONS_KM.forEach { km ->
                     FilterChip(
-                        selected = mapRadius == km,
-                        onClick = {
-                            mapRadius = km
-                            prefs.setMapSearchRadiusKm(km)
-                            onSettingsChanged()
-                        },
+                        selected = settings.mapRadiusKm == km,
+                        onClick = { viewModel.setMapRadiusKm(km) },
                         label = { Text("$km km") }
                     )
                 }
@@ -266,7 +226,7 @@ private fun SettingLabel(icon: ImageVector, label: String, modifier: Modifier = 
 }
 
 @Composable
-fun SettingSwitchRow(icon: ImageVector, label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SettingSwitchRow(icon: ImageVector, label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,

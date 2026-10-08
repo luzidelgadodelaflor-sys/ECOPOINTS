@@ -1,19 +1,14 @@
-package com.example.ecopoints.app
+package com.example.ecopoints.app.ui.map
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Location
 import android.net.Uri
-import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -49,16 +44,12 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,59 +65,25 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.example.ecopoints.app.data.PreferencesManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ecopoints.app.R
 import com.example.ecopoints.app.data.RecyclingPoint
-import com.example.ecopoints.app.data.RecyclingPointsRepository
-import com.example.ecopoints.app.ui.theme.*
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationTokenSource
-import kotlinx.coroutines.suspendCancellableCoroutine
-import org.osmdroid.config.Configuration
+import com.example.ecopoints.app.domain.EcoRules
+import com.example.ecopoints.app.ui.theme.EcoBackground
+import com.example.ecopoints.app.ui.theme.EcoBorder
+import com.example.ecopoints.app.ui.theme.EcoCard
+import com.example.ecopoints.app.ui.theme.EcoGreen
+import com.example.ecopoints.app.ui.theme.EcoGreenDark
+import com.example.ecopoints.app.ui.theme.EcoGreenLight
+import com.example.ecopoints.app.ui.theme.EcoTextMuted
+import com.example.ecopoints.app.ui.theme.EcoTextPrimary
+import com.example.ecopoints.app.ui.theme.EcoTextSecondary
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
-import java.io.File
-import kotlin.coroutines.resume
-
-/**
- * EcoMapa (US-08): mapa de OpenStreetMap con la ubicación del usuario (GPS) y los puntos
- * de reciclaje reales que hay dentro del radio elegido.
- */
-class EcoMapActivity : ComponentActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // osmdroid: identifica la app ante los servidores de mapas y guarda la caché de
-        // mapas en el almacenamiento privado (no requiere permisos de almacenamiento).
-        Configuration.getInstance().apply {
-            userAgentValue = packageName
-            osmdroidBasePath = File(cacheDir, "osmdroid")
-            osmdroidTileCache = File(osmdroidBasePath, "tiles")
-        }
-
-        val prefs = PreferencesManager(this)
-        setContent {
-            EcoPointsTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = EcoBackground) {
-                    EcoMapScreen(prefs = prefs, onBack = { finish() })
-                }
-            }
-        }
-    }
-}
-
-private sealed interface MapState {
-    data object Loading : MapState
-    data object NeedsPermission : MapState
-    data object NoLocation : MapState
-    data object NetworkError : MapState
-    data class Loaded(val points: List<RecyclingPoint>) : MapState
-}
 
 private val LOCATION_PERMISSIONS = arrayOf(
     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -135,25 +92,6 @@ private val LOCATION_PERMISSIONS = arrayOf(
 
 private fun hasLocationPermission(context: Context) = LOCATION_PERMISSIONS.any {
     ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-}
-
-/** Ubicación actual del GPS (o la última conocida); null si el GPS está apagado. */
-@SuppressLint("MissingPermission") // Se llama solo después de comprobar el permiso
-private suspend fun currentLocation(context: Context): Location? = suspendCancellableCoroutine { continuation ->
-    val client = LocationServices.getFusedLocationProviderClient(context)
-    val cancellation = CancellationTokenSource()
-    client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellation.token)
-        .addOnSuccessListener { location ->
-            if (location != null) {
-                continuation.resume(location)
-            } else {
-                client.lastLocation
-                    .addOnSuccessListener { continuation.resume(it) }
-                    .addOnFailureListener { continuation.resume(null) }
-            }
-        }
-        .addOnFailureListener { continuation.resume(null) }
-    continuation.invokeOnCancellation { cancellation.cancel() }
 }
 
 private fun distanceLabel(meters: Int): String =
@@ -166,51 +104,42 @@ private fun zoomFor(radiusKm: Int): Double = when (radiusKm) {
     else -> 12.8
 }
 
+/**
+ * EcoMapa (US-08): mapa de OpenStreetMap con la ubicación del usuario (GPS) y los puntos
+ * de reciclaje reales que hay dentro del radio elegido. La búsqueda la hace [MapViewModel].
+ */
 @Composable
-private fun EcoMapScreen(prefs: PreferencesManager, onBack: () -> Unit) {
+fun EcoMapScreen(viewModel: MapViewModel, onBack: () -> Unit) {
     val context = LocalContext.current
-    var radiusKm by remember { mutableIntStateOf(prefs.getMapSearchRadiusKm()) }
-    var userLocation by remember { mutableStateOf<GeoPoint?>(null) }
-    var state by remember { mutableStateOf<MapState>(MapState.Loading) }
-    var selected by remember { mutableStateOf<RecyclingPoint?>(null) }
-    var reloadKey by remember { mutableIntStateOf(0) }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val radiusKm = state.radiusKm
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
-        if (result.values.any { it }) reloadKey++ else state = MapState.NeedsPermission
+        viewModel.load(hasLocationPermission = result.values.any { it })
     }
 
     LaunchedEffect(Unit) {
         if (!hasLocationPermission(context)) permissionLauncher.launch(LOCATION_PERMISSIONS)
     }
 
-    // Se vuelve a buscar al conceder el permiso, al reintentar o al cambiar el radio
-    LaunchedEffect(reloadKey, radiusKm) {
-        if (!hasLocationPermission(context)) {
-            state = MapState.NeedsPermission
-            return@LaunchedEffect
-        }
-        state = MapState.Loading
-        selected = null
-        val location = currentLocation(context)
-        if (location == null) {
-            state = MapState.NoLocation
-            return@LaunchedEffect
-        }
-        userLocation = GeoPoint(location.latitude, location.longitude)
-        state = try {
-            MapState.Loaded(RecyclingPointsRepository.findNearby(location.latitude, location.longitude, radiusKm))
-        } catch (e: Exception) {
-            MapState.NetworkError
-        }
+    // Se busca al abrir (cuando ya se conoce el radio) y cada vez que el radio cambia
+    LaunchedEffect(radiusKm) {
+        if (radiusKm != null) viewModel.load(hasLocationPermission(context))
     }
 
-    val points = (state as? MapState.Loaded)?.points.orEmpty()
+    val userLocation = remember(state.userLocation) {
+        state.userLocation?.let { GeoPoint(it.latitude, it.longitude) }
+    }
+    val status = state.status
+    val points = (status as? MapStatus.Loaded)?.points.orEmpty()
+    val shownRadius = radiusKm ?: EcoRules.MAP_RADIUS_OPTIONS_KM.first()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(EcoBackground)
             .padding(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -227,13 +156,10 @@ private fun EcoMapScreen(prefs: PreferencesManager, onBack: () -> Unit) {
 
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Radio:", fontSize = 13.sp, color = EcoTextSecondary)
-            PreferencesManager.MAP_RADIUS_OPTIONS_KM.forEach { km ->
+            EcoRules.MAP_RADIUS_OPTIONS_KM.forEach { km ->
                 FilterChip(
-                    selected = radiusKm == km,
-                    onClick = {
-                        radiusKm = km
-                        prefs.setMapSearchRadiusKm(km)
-                    },
+                    selected = shownRadius == km,
+                    onClick = { viewModel.setRadius(km) },
                     label = { Text("$km km") }
                 )
             }
@@ -250,10 +176,10 @@ private fun EcoMapScreen(prefs: PreferencesManager, onBack: () -> Unit) {
         ) {
             OsmMap(
                 userLocation = userLocation,
-                radiusKm = radiusKm,
+                radiusKm = shownRadius,
                 points = points,
-                selected = selected,
-                onSelect = { selected = it },
+                selected = state.selected,
+                onSelect = viewModel::select,
                 modifier = Modifier.fillMaxSize()
             )
             // Atribución obligatoria de la licencia de OpenStreetMap
@@ -270,12 +196,12 @@ private fun EcoMapScreen(prefs: PreferencesManager, onBack: () -> Unit) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        when (val current = state) {
-            MapState.Loading -> StatusMessage(
+        when (status) {
+            MapStatus.Loading -> StatusMessage(
                 icon = null,
                 text = "Buscando puntos de reciclaje cerca de ti…"
             )
-            MapState.NeedsPermission -> StatusMessage(
+            MapStatus.NeedsPermission -> StatusMessage(
                 icon = Icons.Filled.LocationOff,
                 text = "Para mostrarte los puntos de reciclaje cercanos, EcoPoints necesita tu ubicación.",
                 actionLabel = "Permitir ubicación",
@@ -288,30 +214,33 @@ private fun EcoMapScreen(prefs: PreferencesManager, onBack: () -> Unit) {
                     )
                 }
             )
-            MapState.NoLocation -> StatusMessage(
+            MapStatus.NoLocation -> StatusMessage(
                 icon = Icons.Filled.LocationOff,
                 text = "No pudimos obtener tu ubicación. Activa el GPS y vuelve a intentarlo.",
                 actionLabel = "Reintentar",
-                onAction = { reloadKey++ }
+                showRefreshIcon = true,
+                onAction = { viewModel.load(hasLocationPermission(context)) }
             )
-            MapState.NetworkError -> StatusMessage(
+            MapStatus.NetworkError -> StatusMessage(
                 icon = Icons.Filled.WifiOff,
                 text = "No se pudieron cargar los puntos de reciclaje. Revisa tu conexión a internet.",
                 actionLabel = "Reintentar",
-                onAction = { reloadKey++ }
+                showRefreshIcon = true,
+                onAction = { viewModel.load(hasLocationPermission(context)) }
             )
-            is MapState.Loaded -> if (current.points.isEmpty()) {
+            is MapStatus.Loaded -> if (status.points.isEmpty()) {
                 StatusMessage(
                     icon = Icons.Filled.Map,
-                    text = "No hay puntos de reciclaje registrados en OpenStreetMap a menos de $radiusKm km. Prueba con un radio mayor.",
+                    text = "No hay puntos de reciclaje registrados en OpenStreetMap a menos de $shownRadius km. Prueba con un radio mayor.",
                     actionLabel = "Buscar de nuevo",
-                    onAction = { reloadKey++ }
+                    showRefreshIcon = true,
+                    onAction = { viewModel.load(hasLocationPermission(context)) }
                 )
             } else {
                 PointsList(
-                    points = current.points,
-                    selected = selected,
-                    onSelect = { selected = it },
+                    points = status.points,
+                    selected = state.selected,
+                    onSelect = viewModel::select,
                     onDirections = { point ->
                         // Abre la app de mapas del celular para llegar al punto
                         val uri = Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${Uri.encode(point.name)})")
@@ -476,6 +405,7 @@ private fun StatusMessage(
     icon: ImageVector?,
     text: String,
     actionLabel: String? = null,
+    showRefreshIcon: Boolean = false,
     onAction: () -> Unit = {},
     secondaryLabel: String? = null,
     onSecondary: () -> Unit = {}
@@ -499,7 +429,7 @@ private fun StatusMessage(
                 onClick = onAction,
                 colors = ButtonDefaults.buttonColors(containerColor = EcoGreen)
             ) {
-                if (actionLabel.startsWith("Reintentar") || actionLabel.startsWith("Buscar")) {
+                if (showRefreshIcon) {
                     Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                 }
